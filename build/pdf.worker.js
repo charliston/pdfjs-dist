@@ -22,14 +22,33 @@ if (typeof PDFJS === 'undefined') {
   (typeof window !== 'undefined' ? window : this).PDFJS = {};
 }
 
-PDFJS.version = '1.1.12';
-PDFJS.build = '8cc903d';
+PDFJS.version = '1.0.4';
+PDFJS.build = '4f5fa96';
 
 (function pdfjsWrapper() {
   // Use strict in our context only - users might not want it
   'use strict';
 
+/* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
+/* Copyright 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* globals Cmd, ColorSpace, Dict, MozBlobBuilder, Name, PDFJS, Ref, URL,
+           Promise */
 
+'use strict';
 
 var globalScope = (typeof window === 'undefined') ? this : window;
 
@@ -523,7 +542,8 @@ Object.defineProperty(PDFJS, 'isLittleEndian', {
   }
 });
 
-  // Lazy test if the userAgent support CanvasTypedArrays
+//#if !(FIREFOX || MOZCENTRAL || CHROME)
+//// Lazy test if the userAgent support CanvasTypedArrays
 function hasCanvasTypedArrays() {
   var canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;
@@ -578,6 +598,9 @@ var Uint32ArrayView = (function Uint32ArrayViewClosure() {
 
   return Uint32ArrayView;
 })();
+//#else
+//PDFJS.hasCanvasTypedArrays = true;
+//#endif
 
 var IDENTITY_MATRIX = [1, 0, 0, 1, 0, 0];
 
@@ -1106,6 +1129,7 @@ PDFJS.createPromiseCapability = createPromiseCapability;
     }
     return;
   }
+//#if !MOZCENTRAL
   var STATUS_PENDING = 0;
   var STATUS_RESOLVED = 1;
   var STATUS_REJECTED = 2;
@@ -1365,6 +1389,9 @@ PDFJS.createPromiseCapability = createPromiseCapability;
   };
 
   globalScope.Promise = Promise;
+//#else
+//throw new Error('DOM Promise is not present');
+//#endif
 })();
 
 var StatTimer = (function StatTimerClosure() {
@@ -1598,6 +1625,21 @@ function loadJpegStream(id, imageUrl, objs) {
 
 
 
+//#if (FIREFOX || MOZCENTRAL)
+//
+//Components.utils.import('resource://gre/modules/Services.jsm');
+//
+//var EXPORTED_SYMBOLS = ['NetworkManager'];
+//
+//var console = {
+//  log: function console_log(aMsg) {
+//    var msg = 'network.js: ' + (aMsg.join ? aMsg.join('') : aMsg);
+//    Services.console.logStringMessage(msg);
+//    // TODO(mack): dump() doesn't seem to work here...
+//    dump(msg + '\n');
+//  }
+//}
+//#endif
 
 var NetworkManager = (function NetworkManagerClosure() {
 
@@ -1633,6 +1675,7 @@ var NetworkManager = (function NetworkManagerClosure() {
     return array.buffer;
   }
 
+//#if !(CHROME || FIREFOX || MOZCENTRAL)
   var supportsMozChunked = (function supportsMozChunkedClosure() {
     var x = new XMLHttpRequest();
     try {
@@ -1652,6 +1695,7 @@ var NetworkManager = (function NetworkManagerClosure() {
       return false;
     }
   })();
+//#endif
 
   NetworkManager.prototype = {
     requestRange: function NetworkManager_requestRange(begin, end, listeners) {
@@ -1693,7 +1737,15 @@ var NetworkManager = (function NetworkManagerClosure() {
         pendingRequest.expectedStatus = 200;
       }
 
+//#if CHROME
+//    var useMozChunkedLoading = false;
+//#endif
+//#if (FIREFOX || MOZCENTRAL)
+//    var useMozChunkedLoading = !!args.onProgressiveData;
+//#endif
+//#if !(CHROME || FIREFOX || MOZCENTRAL)
       var useMozChunkedLoading = supportsMozChunked && !!args.onProgressiveData;
+//#endif
       if (useMozChunkedLoading) {
         xhr.responseType = 'moz-chunked-arraybuffer';
         pendingRequest.onProgressiveData = args.onProgressiveData;
@@ -39422,6 +39474,30 @@ var bidi = PDFJS.bidi = (function bidiClosure() {
   return bidi;
 })();
 
+/* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
+
+/* Copyright 2014 Opera Software ASA
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ *
+ * Based on https://code.google.com/p/smhasher/wiki/MurmurHash3.
+ * Hashes roughly 100 KB per millisecond on i7 3.4 GHz.
+ */
+/* globals Uint32ArrayView */
+
+'use strict';
 
 var MurmurHash3_64 = (function MurmurHash3_64Closure (seed) {
   // Workaround for missing math precison in JS.
@@ -39435,12 +39511,14 @@ var MurmurHash3_64 = (function MurmurHash3_64Closure (seed) {
   }
 
   var alwaysUseUint32ArrayView = false;
+//#if !(FIREFOX || MOZCENTRAL || CHROME)
   // old webkits have issues with non-aligned arrays
   try {
     new Uint32Array(new Uint8Array(5).buffer, 0, 1);
   } catch (e) {
     alwaysUseUint32ArrayView = true;
   }
+//#endif
 
   MurmurHash3_64.prototype = {
     update: function MurmurHash3_64_update(input) {
@@ -39576,5 +39654,4 @@ if (!PDFJS.workerSrc && typeof document !== 'undefined') {
     return pdfjsSrc && pdfjsSrc.replace(/\.js$/i, '.worker.js');
   })();
 }
-
 

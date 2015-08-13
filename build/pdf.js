@@ -22,14 +22,33 @@ if (typeof PDFJS === 'undefined') {
   (typeof window !== 'undefined' ? window : this).PDFJS = {};
 }
 
-PDFJS.version = '1.1.12';
-PDFJS.build = '8cc903d';
+PDFJS.version = '1.0.4';
+PDFJS.build = '4f5fa96';
 
 (function pdfjsWrapper() {
   // Use strict in our context only - users might not want it
   'use strict';
 
+/* -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set shiftwidth=2 tabstop=2 autoindent cindent expandtab: */
+/* Copyright 2012 Mozilla Foundation
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* globals Cmd, ColorSpace, Dict, MozBlobBuilder, Name, PDFJS, Ref, URL,
+           Promise */
 
+'use strict';
 
 var globalScope = (typeof window === 'undefined') ? this : window;
 
@@ -523,7 +542,8 @@ Object.defineProperty(PDFJS, 'isLittleEndian', {
   }
 });
 
-  // Lazy test if the userAgent support CanvasTypedArrays
+//#if !(FIREFOX || MOZCENTRAL || CHROME)
+//// Lazy test if the userAgent support CanvasTypedArrays
 function hasCanvasTypedArrays() {
   var canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;
@@ -578,6 +598,9 @@ var Uint32ArrayView = (function Uint32ArrayViewClosure() {
 
   return Uint32ArrayView;
 })();
+//#else
+//PDFJS.hasCanvasTypedArrays = true;
+//#endif
 
 var IDENTITY_MATRIX = [1, 0, 0, 1, 0, 0];
 
@@ -1106,6 +1129,7 @@ PDFJS.createPromiseCapability = createPromiseCapability;
     }
     return;
   }
+//#if !MOZCENTRAL
   var STATUS_PENDING = 0;
   var STATUS_RESOLVED = 1;
   var STATUS_REJECTED = 2;
@@ -1365,6 +1389,9 @@ PDFJS.createPromiseCapability = createPromiseCapability;
   };
 
   globalScope.Promise = Promise;
+//#else
+//throw new Error('DOM Promise is not present');
+//#endif
 })();
 
 var StatTimer = (function StatTimerClosure() {
@@ -2502,6 +2529,7 @@ var WorkerTransport = (function WorkerTransportClosure() {
     // all requirements to run parts of pdf.js in a web worker.
     // Right now, the requirement is, that an Uint8Array is still an Uint8Array
     // as it arrives on the worker. Chrome added this with version 15.
+//#if !SINGLE_FILE
     if (!globalScope.PDFJS.disableWorker && typeof Worker !== 'undefined') {
       var workerSrc = PDFJS.workerSrc;
       if (!workerSrc) {
@@ -2544,6 +2572,7 @@ var WorkerTransport = (function WorkerTransportClosure() {
         info('The worker has been disabled.');
       }
     }
+//#endif
     // Either workers are disabled, not supported or have thrown an exception.
     // Thus, we fallback to a faked worker.
     this.setupFakeWorker();
@@ -2569,9 +2598,17 @@ var WorkerTransport = (function WorkerTransportClosure() {
         // In the developer build load worker_loader which in turn loads all the
         // other files and resolves the promise. In production only the
         // pdf.worker.js file is needed.
-        Util.loadScript(PDFJS.workerSrc, function() {
-          PDFJS.fakeWorkerFilesLoadedCapability.resolve();
-        });
+//#if !PRODUCTION
+        Util.loadScript(PDFJS.workerSrc);
+//#endif
+//#if PRODUCTION && SINGLE_FILE
+//      PDFJS.fakeWorkerFilesLoadedCapability.resolve();
+//#endif
+//#if PRODUCTION && !SINGLE_FILE
+//      Util.loadScript(PDFJS.workerSrc, function() {
+//        PDFJS.fakeWorkerFilesLoadedCapability.resolve();
+//      });
+//#endif
       }
       PDFJS.fakeWorkerFilesLoadedCapability.promise.then(function () {
         warn('Setting up fake worker.');
@@ -6277,11 +6314,14 @@ var FontLoader = {
     if (styleElement) {
       styleElement.parentNode.removeChild(styleElement);
     }
+//#if !(MOZCENTRAL)
     this.nativeFontFaces.forEach(function(nativeFontFace) {
       document.fonts.delete(nativeFontFace);
     });
     this.nativeFontFaces.length = 0;
+//#endif
   },
+//#if !(MOZCENTRAL)
   get loadTestFont() {
     // This is a CFF font with 1 glyph for '.' that fills its entire width and
     // height.
@@ -6522,6 +6562,23 @@ var FontLoader = {
       });
       /** Hack end */
   }
+//#else
+//bind: function fontLoaderBind(fonts, callback) {
+//  assert(!isWorker, 'bind() shall be called from main thread');
+//
+//  for (var i = 0, ii = fonts.length; i < ii; i++) {
+//    var font = fonts[i];
+//    if (font.attached) {
+//      continue;
+//    }
+//
+//    font.attached = true;
+//    font.bindDOM()
+//  }
+//
+//  setTimeout(callback);
+//}
+//#endif
 };
 
 var FontFaceObject = (function FontFaceObjectClosure() {
@@ -6537,6 +6594,7 @@ var FontFaceObject = (function FontFaceObjectClosure() {
     }
   }
   FontFaceObject.prototype = {
+//#if !(MOZCENTRAL)
     createNativeFontFace: function FontFaceObject_createNativeFontFace() {
       if (!this.data) {
         return null;
@@ -6557,6 +6615,7 @@ var FontFaceObject = (function FontFaceObjectClosure() {
       }
       return nativeFontFace;
     },
+//#endif
 
     bindDOM: function FontFaceObject_bindDOM() {
       if (!this.data) {
@@ -6869,6 +6928,7 @@ var AnnotationUtils = (function AnnotationUtilsClosure() {
 PDFJS.AnnotationUtils = AnnotationUtils;
 
 
+//#if (GENERIC || SINGLE_FILE)
 var SVG_DEFAULTS = {
   fontStyle: 'normal',
   fontWeight: 'normal',
@@ -8040,6 +8100,7 @@ var SVGGraphics = (function SVGGraphicsClosure() {
 })();
 
 PDFJS.SVGGraphics = SVGGraphics;
+//#endif
 
 
 }).call((typeof window === 'undefined') ? this : window);
@@ -8054,5 +8115,4 @@ if (!PDFJS.workerSrc && typeof document !== 'undefined') {
     return pdfjsSrc && pdfjsSrc.replace(/\.js$/i, '.worker.js');
   })();
 }
-
 
