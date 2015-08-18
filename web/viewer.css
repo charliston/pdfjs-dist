@@ -541,7 +541,7 @@ html[dir='rtl'] #toolbarContainer, .findbar, .secondaryToolbar {
 }
 
 html[dir='ltr'] .findbar {
-  left: 68px;
+  left: 0;
 }
 
 html[dir='rtl'] .findbar {
@@ -1998,3 +1998,10 @@ html[dir='rtl'] #documentPropertiesOverlay .row > * {
     display: none;
   }
 }
+.openFile, .download, #secondaryToolbarToggle, #viewBookmark,
+#toolbarViewerRight .verticalToolbarSeparator, #sidebarToggle,
+#toolbarViewerRight #print,
+#toolbarViewerLeft .toolbarButtonSpacer
+{display: none;}
+
+#toolbarViewerMiddle #scaleSelectContainer {font-size: 15px;line-height: 22px;}

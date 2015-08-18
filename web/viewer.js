@@ -7650,8 +7650,8 @@ window.addEventListener('pagechange', function pagechange(evt) {
   }
   var numPages = PDFViewerApplication.pagesCount;
 
-  document.getElementById('previous').disabled = (page <= 1);
-  document.getElementById('next').disabled = (page >= numPages);
+  // document.getElementById('previous').disabled = (page <= 1);
+  // document.getElementById('next').disabled = (page >= numPages);
 
   document.getElementById('firstPage').disabled = (page <= 1);
   document.getElementById('lastPage').disabled = (page >= numPages);
