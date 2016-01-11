@@ -22,7 +22,7 @@ if (typeof PDFJS === 'undefined') {
   (typeof window !== 'undefined' ? window : this).PDFJS = {};
 }
 
-PDFJS.version = '1.2.2';
+PDFJS.version = '1.2.3';
 PDFJS.build = '4f5fa96';
 
 (function pdfjsWrapper() {
